@@ -7,7 +7,7 @@ import time
 import re
 import pandas as pd
 
-# Set up the serial port (modify with your port and baud rate)
+# Set up the serial port (modify with your port and baud rate) 
 def detect_device():
     device_ports = [
         p.device
