@@ -1,3 +1,6 @@
+from kivymd.uix.bottomsheet.bottomsheet import MDLabel
+import asyncio
+import threading
 from kivy.app import App
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.image import Image
@@ -6,13 +9,30 @@ from kivy.clock import Clock
 from kivy.uix.widget import Widget
 from kivy.graphics import PushMatrix, PopMatrix, Rotate, Color, Rectangle
 from kivy.properties import NumericProperty
+from kivy.uix.label import Label
+from kivy.uix.button import Button
+from kivy.uix.boxlayout import BoxLayout  
+from kivy.uix.scrollview import ScrollView
+from kivy.uix.gridlayout import GridLayout
+from kivy.uix.popup import Popup
+from kivy.properties import ListProperty
 from kivy.lang import Builder
 from kivymd.app import MDApp
+from bleak import BleakScanner
+from threading import Thread
+from kivy.clock import Clock
+from kivy.metrics import dp 
+from kivymd.uix.label import MDLabel
+
+
 
 # KivyMD layout for the MainScreen
 KV = '''
+########################################################################################
+                                    #MainScreen
+########################################################################################
 <DrawerClickableItem@MDNavigationDrawerItem>
-    focus_color: "#e7e4c0"
+    focus_color: "#fffff0"
     text_color: "#4a4939"
     icon_color: "#4a4939"
     ripple_color: "#c5bdd2"
@@ -36,10 +56,10 @@ MDScreen:
             MDScreen:
 
                 MDTopAppBar:
-                    title: "Navigation Drawer"
+                    title: "MAMBA"
                     elevation: 4
                     pos_hint: {"top": 1}
-                    md_bg_color: "#e7e4c0"
+                    md_bg_color: "#fffff0"
                     specific_text_color: "#4a4939"
                     left_action_items: [["menu", lambda x: nav_drawer.set_state("open")]]
 
@@ -56,16 +76,15 @@ MDScreen:
                     spacing: "4dp"
                     padding: "12dp", 0, 0, "56dp"
 
-                # MDNavigationDrawerLabel:
-                #     icon: "device"
-                #     text: "Bluetooth Option"
+                MDNavigationDrawerLabel:
+                    text: "Settings"
 
                 MDNavigationDrawerDivider:
 
                 DrawerClickableItem:
                     icon: "cellphone"
                     text: "Device"
-
+                    on_release: app.root.current = 'bluetooth_screen'  # Switch to Bluetooth screen
 
                 DrawerClickableItem:
                     icon: "information-outline"
@@ -74,10 +93,174 @@ MDScreen:
                 DrawerClickableItem:
                     icon: "close"
                     text: "Close"
+                    on_release: nav_drawer.set_state("close")  # Close the drawer when clicked
+                    
+
+########################################################################################
+                                    #BluetoothScreen
+########################################################################################
+
+<BluetoothScreen>:
+    name: 'bluetooth_screen'
+    BoxLayout:
+        orientation: 'vertical'
+        canvas.before:
+            Color:
+                rgba: 0, 0, 0, 1  # Black background
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        CustomTopAppBar:
+            title: "Bluetooth Device Connection"
+            md_bg_color: "#fffff0"  # Background color of the AppBar
+            specific_text_color: "#4a4939"  # Text color in the AppBar
+
+            left_action_items: [["arrow-left", lambda x: app.go_back()]]  # Action to go back
+            
+            right_action_items: [["bluetooth", lambda x: app.scan_for_devices()]]  # Action to scan for devices
+
+        MDSpinner:
+            id: spinner
+            size_hint: None, None
+            size: dp(30), dp(30)
+            pos_hint: {'center_x': .5, 'center_y': .5}
+            active: False  # Initially inactive
+
+        Label:
+            text: "Scan for Devices"
+            font_size: '24sp'
+            bold: True
+            color: 1, 1, 1, 1  # White text color
+
+        ScrollView:
+            MDList:
+                id: devices_list  # ID for accessing the list in Python
+                size_hint_y: None
+                height: self.minimum_height  # Automatically adjust height based on content
+
+        # A placeholder label in case no devices are found
+        Label:
+            id: no_devices_label
+            text: "No devices found."
+            color: 1, 1, 1, 1  # White text color
+            size_hint_y: None
+            height: self.texture_size[1] + dp(10)  # Dynamic height based on text
+    
+<DeviceLabel@MDLabel>:
+    device_name: ''
+    text: root.device_name
+    halign: 'center'
+    size_hint_y: None
+    height: dp(40)
+    background_color: 0, 0, 0, 0  # Transparent background color
+    on_release: app.connect_to_device(root.device_name)
+
+<DevicesView>:
+    viewclass: 'DeviceLabel'
+    RecycleView:
+        id: rv
+        RecycleBoxLayout:
+            default_size: None, dp(56)
+            default_size_hint: 1, None
+            size_hint_y: None
+            height: self.minimum_height
+            orientation: 'vertical'
+
+<DeviceLabel>:
+    size_hint_y: None
+    height: dp(40)
+    canvas.before:
+        Color:
+            rgba: 0, 0, 0, 1  # Optional: Background color for DeviceLabel
+        Rectangle:
+            pos: self.pos
+            size: self.size
+    Label:
+        text: root.device_name
+        color: 1, 1, 1, 1  # White text color
+
+
+
+<CustomTopAppBar@MDTopAppBar>:
+    canvas.before:
+        # Draw the 3D depth circle behind the Bluetooth icon
+        Color:
+            rgba: 0.2, 0.6, 0.8, 0.5  # Circle color with some transparency
+        Ellipse:
+            pos: self.x - dp(20), self.y + self.height/2 - dp(20)  # Positioning the circle
+            size: dp(40), dp(40)  # Size of the circle (adjust as needed)
+
 
 '''
 
 
+class BluetoothScreen(Screen):
+    # def __init__(self, **kwargs):
+    #     super(BluetoothScreen, self).__init__(**kwargs)
+
+    # async def async_scan_for_devices(self):
+    #     """ Asynchronously scan for Bluetooth devices. """
+    #     devices = await BleakScanner.discover()
+    #     return [device.name for device in devices if device.name]
+
+    # def scan_for_devices(self):
+    #     """ Start the Bluetooth device scanning. """
+    #     loop = asyncio.get_event_loop()
+    #     try:
+    #         devices = loop.run_until_complete(self.async_scan_for_devices())
+            
+    #         # Update the devices_list label with found devices
+    #         devices_list_label = self.ids.devices_list
+    #         if devices:
+    #             devices_list_label.text = "\n".join(devices)
+    #         else:
+    #             devices_list_label.text = "No devices found."
+    #     except Exception as e:
+    #         devices_list_label.text = f"Error: {str(e)}"  # Display the error message
+
+    def scan_for_devices(self):
+        """ Start the Bluetooth device scanning in a separate thread. """
+        self.ids.spinner.active = True  # Show the spinner
+        threading.Thread(target=self.async_scan_for_devices).start()  # Start scanning in a new thread
+
+    def async_scan_for_devices(self):
+        """ Asynchronously scan for Bluetooth devices. """
+        try:
+            devices = asyncio.run(BleakScanner.discover())  # Run the scanner
+            device_names = [device.name for device in devices if device.name]
+            # Schedule an update to the UI thread
+            Clock.schedule_once(lambda dt: self.update_device_list(device_names))
+        except Exception as e:
+            # Schedule an update for error message
+            Clock.schedule_once(lambda dt: self.show_error(f"Error: {str(e)}"))
+        finally:
+            # Stop the spinner
+            Clock.schedule_once(lambda dt: setattr(self.ids.spinner, 'active', False))
+
+    def update_device_list(self, devices):
+        """ Update the devices_list with found devices. """
+        devices_list = self.ids.devices_list  # Access the MDList
+        devices_list.clear_widgets()  # Clear the previous list
+
+    # Access the no_devices_label correctly
+        no_devices_label = self.ids.no_devices_label
+
+        if devices:
+            no_devices_label.text = f"{len(devices)} device(s) found."
+            no_devices_label.height = 0  # Hide the label if devices are found
+            # Add each device as a button in the MDList
+            for device in devices:
+                device_label = DeviceLabel(device_name=device)  # Ensure DeviceLabel is defined in KV file
+                devices_list.add_widget(device_label)
+        else:
+            no_devices_label.text = "No devices found."
+            no_devices_label.height = no_devices_label.texture_size[1] + dp(10)  # Show the label if no devices
+
+
+    def show_error(self, message):
+        """ Show error message in the devices_list label. """
+        self.ids.devices_list.text = message
 
 class AnimatedLogo(Widget):
     dummy_angle = NumericProperty(0)  # Create a property that can be animated
@@ -104,6 +287,7 @@ class AnimatedLogo(Widget):
     def on_dummy_angle(self, instance, value):
         self.rotation.angle = value  # Update the rotation angle whenever the dummy_angle changes
 
+
 class SplashScreen(Screen):
     def __init__(self, **kwargs):
         super(SplashScreen, self).__init__(**kwargs)
@@ -116,7 +300,7 @@ class SplashScreen(Screen):
         self.add_widget(self.animated_logo)
 
         # Create an animation that updates the dummy_angle property
-        animation = Animation(dummy_angle=360, duration=0.8)
+        animation = Animation(dummy_angle=360, duration=1)
         animation.bind(on_complete=self.on_animation_complete)
         animation.start(self.animated_logo)
 
@@ -130,6 +314,7 @@ class SplashScreen(Screen):
 
     def switch_to_main_screen(self, dt):
         self.manager.current = 'main_screen'
+
 
 class MainScreen(Screen):
     def __init__(self, **kwargs):
@@ -147,18 +332,23 @@ class MainScreen(Screen):
         self.rect.pos = self.pos
         self.rect.size = self.size
 
+
 class MyApp(MDApp):
     def build(self):
         sm = ScreenManager()
         sm.add_widget(SplashScreen(name='splash_screen'))
         sm.add_widget(MainScreen(name='main_screen'))
+        sm.add_widget(BluetoothScreen(name='bluetooth_screen'))  # Add the Bluetooth screen
         sm.current = 'splash_screen'
         return sm
-    
-    def callback(self):
-        print("Menu button pressed.")
 
-   
+    def scan_for_devices(self):
+        """ Method to initiate scanning from the app level. """
+        self.root.get_screen('bluetooth_screen').scan_for_devices()
+    
+    def go_back(self):
+        self.root.get_screen('main_screen').manager.current = 'main_screen'  # Example logic to go back
+
 
 if __name__ == '__main__':
     MyApp().run()

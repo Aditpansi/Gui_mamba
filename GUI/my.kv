@@ -1,0 +1,112 @@
+<DrawerClickableItem@MDNavigationDrawerItem>
+    focus_color: "#fffff0"
+    text_color: "#4a4939"
+    icon_color: "#4a4939"
+    ripple_color: "#c5bdd2"
+    selected_color: "#0c6c4d"
+
+
+<DrawerLabelItem@MDNavigationDrawerItem>
+    text_color: "#4a4939"
+    icon_color: "#4a4939"
+    focus_behavior: False
+    selected_color: "#4a4939"
+    _no_ripple_effect: True
+
+
+MDScreen:
+
+    MDNavigationLayout:
+
+        MDScreenManager:
+
+            MDScreen:
+
+                MDTopAppBar:
+                    # title: "Momentux Systems"
+                    elevation: 4
+                    pos_hint: {"top": 1}
+                    md_bg_color: "#fffff0"
+                    specific_text_color: "#4a4939"
+                    left_action_items: [["menu", lambda x: nav_drawer.set_state("open")]]
+
+        MDNavigationDrawer:
+            id: nav_drawer
+            radius: (0, 16, 16, 0)
+
+            MDNavigationDrawerMenu:
+
+                MDNavigationDrawerHeader:
+                    title: "Momentux"
+                    title_color: "#4a4939"
+                    text: "Systems"
+                    spacing: "4dp"
+                    padding: "12dp", 0, 0, "56dp"
+
+                MDNavigationDrawerLabel:
+                    text: "Settings"
+
+                MDNavigationDrawerDivider:
+
+                DrawerClickableItem:
+                    icon: "cellphone"
+                    text: "Device"
+                    on_release: app.root.current = 'bluetooth_screen'  # Switch to Bluetooth screen
+
+                DrawerClickableItem:
+                    icon: "information-outline"
+                    text: "Info" 
+
+                DrawerClickableItem:
+                    icon: "close"
+                    text: "Close"
+                    on_release: nav_drawer.set_state("close")  # Close the drawer when clicked
+
+
+<BluetoothScreen>:
+    name: 'bluetooth_screen'
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 20
+        spacing: 10
+
+        Label:
+            text: "Bluetooth Device Connection"
+            font_size: '24sp'
+            bold: True
+
+        Button:
+            text: "Scan for Devices"
+            size_hint: (None, None)
+            size: (200, 50)
+            on_release: app.scan_for_devices()  # Method to initiate scanning
+
+        Label:
+            id: devices_list
+            text: "No devices found."
+            size_hint: (1, None)
+            height: 50
+
+<DevicesView>:
+    viewclass: 'DeviceLabel'
+    RecycleView:
+        id: rv
+        RecycleBoxLayout:
+            default_size: None, dp(56)
+            default_size_hint: 1, None
+            size_hint_y: None
+            height: self.minimum_height
+            orientation: 'vertical'
+
+<DeviceLabel>:
+    size_hint_y: None
+    height: dp(40)
+    canvas.before:
+        Color:
+            rgba: 0, 0, 0, 1
+        Rectangle:
+            pos: self.pos
+            size: self.size
+    Label:
+        text: root.device_name
+        color: 1, 1, 1, 1
