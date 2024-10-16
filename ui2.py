@@ -1,4 +1,3 @@
-from kivymd.uix.bottomsheet.bottomsheet import MDLabel
 import asyncio
 import threading
 from kivy.app import App
@@ -21,9 +20,6 @@ from kivymd.app import MDApp
 from bleak import BleakScanner
 from threading import Thread
 from kivy.clock import Clock
-from kivy.metrics import dp 
-from kivymd.uix.label import MDLabel
-
 
 
 # KivyMD layout for the MainScreen
@@ -133,28 +129,12 @@ MDScreen:
             bold: True
             color: 1, 1, 1, 1  # White text color
 
-        ScrollView:
-            MDList:
-                id: devices_list  # ID for accessing the list in Python
-                size_hint_y: None
-                height: self.minimum_height  # Automatically adjust height based on content
-
-        # A placeholder label in case no devices are found
         Label:
-            id: no_devices_label
+            id: devices_list
             text: "No devices found."
+            size_hint: (1, None)
+            height: 50
             color: 1, 1, 1, 1  # White text color
-            size_hint_y: None
-            height: self.texture_size[1] + dp(10)  # Dynamic height based on text
-    
-<DeviceLabel@MDLabel>:
-    device_name: ''
-    text: root.device_name
-    halign: 'center'
-    size_hint_y: None
-    height: dp(40)
-    background_color: 0, 0, 0, 0  # Transparent background color
-    on_release: app.connect_to_device(root.device_name)
 
 <DevicesView>:
     viewclass: 'DeviceLabel'
@@ -179,8 +159,6 @@ MDScreen:
     Label:
         text: root.device_name
         color: 1, 1, 1, 1  # White text color
-
-
 
 <CustomTopAppBar@MDTopAppBar>:
     canvas.before:
@@ -239,24 +217,12 @@ class BluetoothScreen(Screen):
             Clock.schedule_once(lambda dt: setattr(self.ids.spinner, 'active', False))
 
     def update_device_list(self, devices):
-        """ Update the devices_list with found devices. """
-        devices_list = self.ids.devices_list  # Access the MDList
-        devices_list.clear_widgets()  # Clear the previous list
-
-    # Access the no_devices_label correctly
-        no_devices_label = self.ids.no_devices_label
-
+        """ Update the devices_list label with found devices. """
+        devices_list_label = self.ids.devices_list
         if devices:
-            no_devices_label.text = f"{len(devices)} device(s) found."
-            no_devices_label.height = 0  # Hide the label if devices are found
-            # Add each device as a button in the MDList
-            for device in devices:
-                device_label = DeviceLabel(device_name=device)  # Ensure DeviceLabel is defined in KV file
-                devices_list.add_widget(device_label)
+            devices_list_label.text = "\n".join(devices)
         else:
-            no_devices_label.text = "No devices found."
-            no_devices_label.height = no_devices_label.texture_size[1] + dp(10)  # Show the label if no devices
-
+            devices_list_label.text = "No devices found."
 
     def show_error(self, message):
         """ Show error message in the devices_list label. """

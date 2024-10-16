@@ -127,9 +127,6 @@ pattern = r'([^,]+),([^,]+),([^,]+),([^,]+)'  # Adjusted to capture Timestamp, R
 style.use('fivethirtyeight')
 fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 10))
 
-# Set the window title
-fig.canvas.manager.set_window_title('MAMBA')
-
 # Store the plot lines and data
 x_data, roll_data, pitch_data, yaw_data = [], [], [], []
 df = pd.DataFrame()
@@ -155,7 +152,7 @@ ax2.legend(loc='upper right')
 ax3.set_title('Yaw (Degrees)')
 ax3.set_ylabel('Yaw')
 ax3.set_xlim(0, 10)
-ax3.set_ylim(-410, 410)
+ax3.set_ylim(-280, 280)
 ax3.legend(loc='upper right')
 
 ax3.set_xlabel('Time (s)')  # X-axis label for the last subplot
@@ -182,23 +179,13 @@ def read_serial_data():
     except (ValueError, IndexError) as e:
         return None, None, None, None  # Error handling for conversion issues
 
-# Create text annotations for displaying real-time values outside the functions
-roll_text = ax1.text(0.02, 0.95, '', transform=ax1.transAxes, fontsize=10, color='red', verticalalignment='top')
-pitch_text = ax2.text(0.02, 0.95, '', transform=ax2.transAxes, fontsize=10, color='green', verticalalignment='top')
-yaw_text = ax3.text(0.02, 0.95, '', transform=ax3.transAxes, fontsize=10, color='blue', verticalalignment='top')
 
 # Function to initialize the plot (blitting setup)
 def init():
     roll_line.set_data([], [])
     pitch_line.set_data([], [])
     yaw_line.set_data([], [])
-
-    # Initialize text annotations
-    roll_text.set_text('')
-    pitch_text.set_text('')
-    yaw_text.set_text('')
-
-    return roll_line, pitch_line, yaw_line, roll_text, pitch_text, yaw_text
+    return roll_line, pitch_line, yaw_line
 
 # Function to update the plot
 def update_plot(i):
@@ -223,18 +210,13 @@ def update_plot(i):
         pitch_line.set_data(x_data, pitch_data)
         yaw_line.set_data(x_data, yaw_data)
 
-        # Update text annotations with the latest values
-        roll_text.set_text(f'Roll: {roll:.2f}')
-        pitch_text.set_text(f'Pitch: {pitch:.2f}')
-        yaw_text.set_text(f'Yaw: {yaw:.2f}')
-
         # Update DataFrame with new values
         df = pd.concat([df, pd.DataFrame({'time': [x_data[-1]], 
                                           'roll': [roll], 
                                           'pitch': [pitch],
                                           'yaw': [yaw]})], ignore_index=True)
 
-    return roll_line, pitch_line, yaw_line, roll_text, pitch_text, yaw_text
+    return roll_line, pitch_line, yaw_line
 
 # Animation function with blitting
 ani = animation.FuncAnimation(fig, update_plot, init_func=init, blit=True, interval=5, cache_frame_data=False)  # 5ms interval
