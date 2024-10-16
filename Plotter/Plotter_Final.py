@@ -84,9 +84,9 @@ def read_serial_data():
         return None, None, None, None  # Error handling for conversion issues
 
 # Create text annotations for displaying real-time values outside the functions
-roll_text = ax1.text(0.02, 0.95, '', transform=ax1.transAxes, fontsize=10, color='red', verticalalignment='top')
-pitch_text = ax2.text(0.02, 0.95, '', transform=ax2.transAxes, fontsize=10, color='green', verticalalignment='top')
-yaw_text = ax3.text(0.02, 0.95, '', transform=ax3.transAxes, fontsize=10, color='blue', verticalalignment='top')
+roll_text = ax1.text(0.02, 0.95, '', transform=ax1.transAxes, fontsize=12, color='red', verticalalignment='top')
+pitch_text = ax2.text(0.02, 0.95, '', transform=ax2.transAxes, fontsize=12, color='green', verticalalignment='top')
+yaw_text = ax3.text(0.02, 0.95, '', transform=ax3.transAxes, fontsize=12, color='blue', verticalalignment='top')
 
 # Function to initialize the plot (blitting setup)
 def init():
