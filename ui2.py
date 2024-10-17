@@ -22,6 +22,7 @@ from threading import Thread
 from kivy.clock import Clock
 
 
+
 # KivyMD layout for the MainScreen
 KV = '''
 ########################################################################################
