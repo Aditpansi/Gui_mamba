@@ -1,3 +1,6 @@
+######################################################################################
+                         #Pitch , Yaw and Pitch vs Yaw
+######################################################################################
 import serial
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -83,9 +86,12 @@ def read_serial_data():
         return None, None, None, None  # Error handling for conversion issues
 
 # Create text annotations for displaying real-time values outside the functions
-pitch_text = ax1.text(0.02, 0.95, '', transform=ax1.transAxes, fontsize=10, color='green', verticalalignment='top')
-yaw_text = ax2.text(0.02, 0.95, '', transform=ax2.transAxes, fontsize=10, color='blue', verticalalignment='top')
-pitch_vs_yaw_text = ax3.text(0.02, 0.95, '', transform=ax3.transAxes, fontsize=10, color='purple', verticalalignment='top')
+pitch_text = ax1.text(0.02, 0.95, '', transform=ax1.transAxes, fontsize=14, color='green', verticalalignment='top',
+                      bbox=dict(facecolor='white', edgecolor='green', boxstyle='round,pad=0.3', alpha=0.8))
+yaw_text = ax2.text(0.02, 0.95, '', transform=ax2.transAxes, fontsize=14, color='blue', verticalalignment='top',
+                    bbox=dict(facecolor='white', edgecolor='blue', boxstyle='round,pad=0.3', alpha=0.8))
+pitch_vs_yaw_text = ax3.text(0.02, 0.95, '', transform=ax3.transAxes, fontsize=14, color='purple', verticalalignment='top',
+                             bbox=dict(facecolor='white', edgecolor='purple', boxstyle='round,pad=0.3', alpha=0.8))
 
 # Function to initialize the plot (blitting setup)
 def init():
