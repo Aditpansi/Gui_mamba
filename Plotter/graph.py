@@ -43,22 +43,26 @@ pitch_line, = ax1.plot([], [], label='Pitch', color='g')
 yaw_line, = ax2.plot([], [], label='Yaw', color='b')
 pitch_vs_yaw_line, = ax3.plot([], [], label='Pitch vs Yaw', color='purple')
 
+#Font-family for title and labels
+title_font = {'family': 'Courier', 'size': 16, 'weight': 'bold', 'color': 'black'}
+label_font = {'family': 'Courier', 'size': 13, 'weight': 'bold', 'color': 'black'}
+
 # Set titles and labels for each subplot
-ax1.set_title('Pitch (Degrees)')
-ax1.set_ylabel('Pitch')
+ax1.set_title('Pitch (Degrees)',fontdict=title_font)
+ax1.set_ylabel('Pitch',fontdict=label_font)
 ax1.set_xlim(0, 10)
 ax1.set_ylim(-60, 60)
 ax1.legend(loc='upper right')
 
-ax2.set_title('Yaw (Degrees)')
-ax2.set_ylabel('Yaw')
+ax2.set_title('Yaw (Degrees)',fontdict=title_font)
+ax2.set_ylabel('Yaw',fontdict=label_font)
 ax2.set_xlim(0, 10)
 ax2.set_ylim(-60, 60)
 ax2.legend(loc='upper right')
 
-ax3.set_title('Pitch vs Yaw')
-ax3.set_xlabel('Yaw')
-ax3.set_ylabel('Pitch')
+ax3.set_title('Pitch vs Yaw',fontdict=title_font)
+ax3.set_xlabel('Yaw',fontdict=label_font)
+ax3.set_ylabel('Pitch',fontdict=label_font)
 ax3.set_xlim(-60, 60)
 ax3.set_ylim(-60, 60)
 ax3.legend(loc='upper right')
@@ -84,7 +88,7 @@ def read_serial_data():
             return None, None, None, None  # Data format mismatch
     except (ValueError, IndexError) as e:
         return None, None, None, None  # Error handling for conversion issues
-
+    
 # Create text annotations for displaying real-time values outside the functions
 pitch_text = ax1.text(0.02, 0.95, '', transform=ax1.transAxes, fontsize=14, color='green', verticalalignment='top',
                       bbox=dict(facecolor='white', edgecolor='green', boxstyle='round,pad=0.3', alpha=0.8))
