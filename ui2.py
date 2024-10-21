@@ -19,7 +19,8 @@ from kivy.lang import Builder
 from kivymd.app import MDApp
 from bleak import BleakScanner
 from threading import Thread
-from kivy.clock import Clock
+
+
 
 
 
@@ -201,15 +202,23 @@ class BluetoothScreen(Screen):
     def scan_for_devices(self):
         """ Start the Bluetooth device scanning in a separate thread. """
         self.ids.spinner.active = True  # Show the spinner
-        threading.Thread(target=self.async_scan_for_devices).start()  # Start scanning in a new thread
+        threading.Thread(target=self.async_scan_for_devices_wrapper).start()  # Start scanning in a new thread
 
-    def async_scan_for_devices(self):
+    def async_scan_for_devices_wrapper(self):
+        """ Wrapper to call the async scanning function. """
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(self.async_scan_for_devices())
+        loop.close()
+
+    async def async_scan_for_devices(self):
         """ Asynchronously scan for Bluetooth devices. """
         try:
-            devices = asyncio.run(BleakScanner.discover())  # Run the scanner
-            device_names = [device.name for device in devices if device.name]
+            devices = await BleakScanner.discover()  # Run the scanner
+            # Extract the Bluetooth address (MAC) and name
+            device_info = [(device.name if device.name else "Unnamed Device", device.address) for device in devices]
             # Schedule an update to the UI thread
-            Clock.schedule_once(lambda dt: self.update_device_list(device_names))
+            Clock.schedule_once(lambda dt: self.update_device_list(device_info))
         except Exception as e:
             # Schedule an update for error message
             Clock.schedule_once(lambda dt: self.show_error(f"Error: {str(e)}"))
@@ -221,13 +230,18 @@ class BluetoothScreen(Screen):
         """ Update the devices_list label with found devices. """
         devices_list_label = self.ids.devices_list
         if devices:
-            devices_list_label.text = "\n".join(devices)
+            # Format the display to show both name and Bluetooth address
+            formatted_devices = [f"{name} - {address}" for name, address in devices]
+            devices_list_label.text = "\n".join(formatted_devices)
         else:
             devices_list_label.text = "No devices found."
+
 
     def show_error(self, message):
         """ Show error message in the devices_list label. """
         self.ids.devices_list.text = message
+
+
 
 class AnimatedLogo(Widget):
     dummy_angle = NumericProperty(0)  # Create a property that can be animated
