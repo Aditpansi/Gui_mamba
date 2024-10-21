@@ -121,7 +121,7 @@ def update_plot(i):
         # Update plot limits dynamically
         ax1.set_xlim(max(0, x_data[-1] - 10), x_data[-1])
         ax2.set_xlim(max(0, x_data[-1] - 10), x_data[-1])
-        ax3.set_xlim(-410, 410)
+        ax3.set_xlim(-60, 60)
 
         # Update data in the plot lines
         pitch_line.set_data(x_data, pitch_data)
