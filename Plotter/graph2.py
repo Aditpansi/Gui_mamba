@@ -29,7 +29,7 @@ pattern = r'([^,]+),([^,]+),([^,]+),([^,]+)'  # Adjusted to capture Timestamp, R
 
 # Initialize plot
 style.use('fivethirtyeight')
-fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10))
+fig, ax1 = plt.subplots(figsize=(10, 6))  # Remove second subplot
 
 # Set the window title
 fig.canvas.manager.set_window_title('MAMBA')
@@ -47,14 +47,13 @@ yaw_line, = ax1.plot([], [], label='Yaw', color='b')
 title_font = {'family': 'Courier', 'size': 16, 'weight': 'bold', 'color': 'black'}
 label_font = {'family': 'Courier', 'size': 13, 'weight': 'bold', 'color': 'black'}
 
-# Set titles and labels for each subplot
+# Set titles and labels
 ax1.set_title('Roll, Pitch, and Yaw (Degrees)', fontdict=title_font)
 ax1.set_ylabel('Degrees', fontdict=label_font)
 ax1.set_xlabel('Time', fontdict=label_font)
 ax1.set_xlim(0, 10)
 ax1.set_ylim(-60, 60)
 ax1.legend(loc='upper right')
-
 
 # Start time for real-time plotting
 start_time = time.time()
@@ -83,9 +82,9 @@ def read_serial_data():
 # Create text annotations for displaying real-time values outside the functions
 roll_text = ax1.text(0.02, 0.95, '', transform=ax1.transAxes, fontsize=14, color='red', verticalalignment='top',
                       bbox=dict(facecolor='white', edgecolor='red', boxstyle='round,pad=0.3', alpha=0.8))
-pitch_text = ax1.text(0.02, 0.90, '', transform=ax1.transAxes, fontsize=14, color='green', verticalalignment='top',
+pitch_text = ax1.text(0.17, 0.95, '', transform=ax1.transAxes, fontsize=14, color='green', verticalalignment='top',
                       bbox=dict(facecolor='white', edgecolor='green', boxstyle='round,pad=0.3', alpha=0.8))
-yaw_text = ax1.text(0.02, 0.85, '', transform=ax1.transAxes, fontsize=14, color='blue', verticalalignment='top',
+yaw_text = ax1.text(0.32, 0.95, '', transform=ax1.transAxes, fontsize=14, color='blue', verticalalignment='top',
                     bbox=dict(facecolor='white', edgecolor='blue', boxstyle='round,pad=0.3', alpha=0.8))
 
 # Function to initialize the plot (blitting setup)
@@ -103,7 +102,7 @@ def init():
 
 # Function to update the plot
 def update_plot(i):
-    global ax1, ax2, df 
+    global ax1, df 
 
     timestamp, roll, pitch, yaw = read_serial_data()
 
