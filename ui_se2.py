@@ -1,7 +1,3 @@
-import serial
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-from kivy.garden.matplotlib import FigureCanvasKivyAgg as FigureCanvas
 from matplotlib import style
 import serial.tools.list_ports
 import time
@@ -10,6 +6,8 @@ import pandas as pd
 import asyncio
 import threading
 from kivy.app import App
+from kivy.garden.matplotlib.backend_kivyagg import FigureCanvasKivyAgg
+import matplotlib.pyplot as plt
 from kivymd.uix.button import MDRaisedButton, MDIconButton
 from kivymd.uix.screen import MDScreen
 from kivy.uix.screenmanager import ScreenManager, Screen
@@ -28,22 +26,6 @@ from kivy.graphics import PushMatrix, PopMatrix, Rotate, Color, Rectangle
 from kivy.lang import Builder
 from kivymd.app import MDApp
 from bleak import BleakScanner
-
-# Constants for serial communication
-BAUD_RATE = 115200
-pattern = r'([^,]+),([^,]+),([^,]+),([^,]+)'  # Matches Timestamp, Roll, Pitch, Yaw
-
-
-# Function to detect device
-def detect_device():
-    device_ports = [
-        p.device
-        for p in serial.tools.list_ports.comports()
-        if 'VID:PID' in p.hwid
-    ]
-    if not device_ports:
-        raise IOError("No device found")
-    return device_ports[0]
 
 # KivyMD layout for the MainScreen
 KV = '''
@@ -234,6 +216,27 @@ MDScreen:
             height: self.texture_size[1]  # Adjust height according to text size
             color: 1, 1, 1, 1   
 '''
+if not hasattr(FigureCanvasKivyAgg, 'resize_event'):
+    def resize_event(self):
+        pass
+    FigureCanvasKivyAgg.resize_event = resize_event
+# Function to detect device
+def detect_device():
+    device_ports = [
+        p.device
+        for p in serial.tools.list_ports.comports()
+        if 'VID:PID' in p.hwid
+    ]
+    if not device_ports:
+        raise IOError("No device found")
+    return device_ports[0]
+
+port = detect_device()
+ser = serial.Serial(port,115200)
+
+# Constants for serial communication
+
+pattern = r'([^,]+),([^,]+),([^,]+),([^,]+)'  # Matches Timestamp, Roll, Pitch, Yaw
 
 class BluetoothScreen(Screen):
     def scan_for_devices(self):
@@ -271,7 +274,22 @@ class BluetoothScreen(Screen):
         """ Show error message in the devices_list label. """
         self.ids.devices_list.text = message
 
+class CustomFigureCanvasKivyAgg(FigureCanvasKivyAgg):
+    def __init__(self, figure, **kwargs):
+        super(CustomFigureCanvasKivyAgg, self).__init__(figure, **kwargs)
+        
+        # Connect the motion notify event to the figure's canvas
+        self.mpl_connect('motion_notify_event', self.on_mouse_move)
 
+    def on_mouse_move(self, event):
+        """Handle mouse movement over the canvas."""
+        if event.inaxes is not None:
+            # Here you can handle mouse movement events
+            print(f'Mouse moved to: ({event.xdata}, {event.ydata})')
+
+            
+
+        
 class GraphScreen(Screen):
     def __init__(self, **kwargs):
         super(GraphScreen, self).__init__(**kwargs)
@@ -294,7 +312,7 @@ class GraphScreen(Screen):
         """Set up the Matplotlib plot in the Kivy screen."""
         try:
             self.port = detect_device()  
-            self.ser = serial.Serial(self.port, BAUD_RATE)  
+            self.ser = serial.Serial(self.port, 115200)  
             print(f"Serial connection established on port {self.port}")
         except Exception as e:
             print(f"Error initializing serial connection: {e}")
@@ -303,7 +321,7 @@ class GraphScreen(Screen):
 
         style.use('fivethirtyeight')
         self.fig, (self.ax1, self.ax2, self.ax3) = plt.subplots(3, 1, figsize=(10, 10))
-        self.canvas = FigureCanvas(self.fig)
+        self.canvas = CustomFigureCanvasKivyAgg(self.fig)
         self.ids.plot_area.add_widget(self.canvas)
 
         self.x_data, self.pitch_data, self.yaw_data = [], [], []
@@ -313,9 +331,10 @@ class GraphScreen(Screen):
         self.yaw_line, = self.ax2.plot([], [], label='Yaw', color='b')
         self.pitch_vs_yaw_line, = self.ax3.plot([], [], label='Pitch vs Yaw', color='purple')
 
-        self.setup_plot_labels()  # Call the label setup here
+        self.setup_plot_labels()
 
-        Clock.schedule_interval(self.update_plot, 0.05)  # Schedule plot updates
+        # Schedule plot updates
+        Clock.schedule_interval(self.update_plot, 0.05)
 
     def setup_plot_labels(self):
         """Set up labels, titles, and legends for the plots."""
@@ -338,24 +357,28 @@ class GraphScreen(Screen):
 
     def update_plot(self, dt):
         """Update the plot with the latest serial data."""
-        if len(self.x_data) > 0:
-            # Update pitch vs time plot
-            self.pitch_line.set_data(self.x_data, self.pitch_data)
-            self.ax1.relim()
-            self.ax1.autoscale_view()
+        try:
+            if len(self.x_data) > 0:
+                # Update pitch vs time plot
+                self.pitch_line.set_data(self.x_data, self.pitch_data)
+                self.ax1.relim()
+                self.ax1.autoscale_view()
 
-            # Update yaw vs time plot
-            self.yaw_line.set_data(self.x_data, self.yaw_data)
-            self.ax2.relim()
-            self.ax2.autoscale_view()
+                # Update yaw vs time plot
+                self.yaw_line.set_data(self.x_data, self.yaw_data)
+                self.ax2.relim()
+                self.ax2.autoscale_view()
 
-            # Update pitch vs yaw plot
-            self.pitch_vs_yaw_line.set_data(self.yaw_data, self.pitch_data)
-            self.ax3.relim()
-            self.ax3.autoscale_view()
+                # Update pitch vs yaw plot
+                self.pitch_vs_yaw_line.set_data(self.yaw_data, self.pitch_data)
+                self.ax3.relim()
+                self.ax3.autoscale_view()
 
-            # Redraw the canvas with updated data
-            self.canvas.draw_idle()
+                # Redraw the canvas
+                self.canvas.draw_idle()
+        except Exception as e:
+            print(f"Error in updating the plot: {e}")  # Log the error
+
 
     def read_serial_data(self):
         """Continuously read serial data."""
@@ -381,6 +404,11 @@ class GraphScreen(Screen):
             print("Serial connection closed.")
         self.ser = None
 
+    # def on_leave(self):
+    #     if hasattr(self, 'ser') and self.ser is not None:
+    #         if self.ser.is_open:
+    #             self.ser.close()
+
 
 class InfoScreen(Screen):
     def __init__(self, **kwargs):
@@ -400,15 +428,22 @@ class AnimatedLogo(Widget):
             source='/Users/aditpansi/Desktop/Momentux/Momentux_Website/images/Momentux-removebg-preview.png',
             size_hint=(None, None), size=(200, 200)
         )
+
         self.add_widget(self.image)
         self.bind(pos=self.update_position, size=self.update_position)
+
+    def start_animation(self):
+        self.animation = Animation(dummy_angle=360, duration=2)
+        self.animation += Animation(dummy_angle=0, duration=0)
+        self.animation.repeat = True
+        self.animation.start(self)
 
     def update_position(self, *args):
         self.image.center = self.center
         self.rotation.origin = self.center
 
-    def on_dummy_angle(self, instance, value):
-        self.rotation.angle = value
+    def on_dummy_angle(self, instance, angle):
+        self.rotation.angle = angle
 
 class SplashScreen(Screen):
     def __init__(self, **kwargs):
@@ -436,7 +471,6 @@ class SplashScreen(Screen):
     def switch_to_main_screen(self, dt):
         self.manager.current = 'main_screen'
 
-
 class MainScreen(Screen):
     def __init__(self, **kwargs):
         super(MainScreen, self).__init__(**kwargs)
@@ -453,25 +487,31 @@ class MainScreen(Screen):
         self.rect.pos = self.pos
         self.rect.size = self.size
 
-
-class MyApp(MDApp):
+class MainApp(MDApp):
     def build(self):
+        
+        self.theme_cls.primary_palette = "BlueGray"
+        # Create an instance of the ScreenManager
         sm = ScreenManager()
-        sm.add_widget(SplashScreen(name='splash_screen'))
-        sm.add_widget(MainScreen(name='main_screen'))
-        sm.add_widget(BluetoothScreen(name='bluetooth_screen'))  # Add the Bluetooth screen
-        sm.add_widget(GraphScreen(name='graph_screen'))  # Add the graph screen
-        sm.add_widget(InfoScreen(name='info_screen'))
-        sm.current = 'splash_screen'
-        return sm
+        
+        # Add the various screens to the ScreenManager
+        sm.add_widget(SplashScreen(name='splash_screen'))  # Welcome screen
+        sm.add_widget(MainScreen(name='main_screen'))  # Main screen
+        sm.add_widget(BluetoothScreen(name='bluetooth_screen'))  # Bluetooth screen
+        sm.add_widget(GraphScreen(name='graph_screen'))  # Graph screen
+        sm.add_widget(InfoScreen(name='info_screen'))  # Info screen
+
+        # Set the initial screen
+        sm.current = 'splash_screen'  # Start with the welcome screen
+
+        return sm  # Return the ScreenManager
 
     def scan_for_devices(self):
         """ Method to initiate scanning from the app level. """
         self.root.get_screen('bluetooth_screen').scan_for_devices()
     
     def go_back(self):
-        self.root.current = 'main_screen'
-
+        self.root.current = 'main_screen'   
 
 if __name__ == '__main__':
-    MyApp().run()
+    MainApp().run()
