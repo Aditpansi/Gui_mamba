@@ -209,12 +209,12 @@ MDScreen:
         Label:
             text: "Information about the application"
             font_size: '24sp'
-            color: 1, 1, 1, 1
+            color: 0, 0, 0, 1
         Label:
             text: "This application allows you to connect to Bluetooth devices and visualize data."
             size_hint_y: None
             height: self.texture_size[1]  # Adjust height according to text size
-            color: 1, 1, 1, 1   
+            color: 0, 0, 0, 1   
 '''
 if not hasattr(FigureCanvasKivyAgg, 'resize_event'):
     def resize_event(self):
@@ -320,16 +320,24 @@ class GraphScreen(Screen):
             return
 
         style.use('fivethirtyeight')
-        self.fig, (self.ax1, self.ax2, self.ax3) = plt.subplots(3, 1, figsize=(10, 10))
+        self.fig, self.ax = plt.subplots(figsize=(10, 5))  # One subplot for Roll, Pitch, Yaw
         self.canvas = CustomFigureCanvasKivyAgg(self.fig)
         self.ids.plot_area.add_widget(self.canvas)
 
-        self.x_data, self.pitch_data, self.yaw_data = [], [], []
+        self.x_data ,self.roll_data, self.pitch_data, self.yaw_data = [], [], [] , []
         self.df = pd.DataFrame()
 
-        self.pitch_line, = self.ax1.plot([], [], label='Pitch', color='g')
-        self.yaw_line, = self.ax2.plot([], [], label='Yaw', color='b')
-        self.pitch_vs_yaw_line, = self.ax3.plot([], [], label='Pitch vs Yaw', color='purple')
+        self.line_roll, = self.ax.plot([], [], label='Roll', color='r')
+        self.line_pitch, = self.ax.plot([], [], label='Elevation', color='g')
+        self.line_yaw, = self.ax.plot([], [], label='Azimuth', color='b')
+
+        # Initialize text annotations
+        self.roll_text = self.ax.text(0.02, 0.95, '', transform=self.ax.transAxes, fontsize=14, color='red', verticalalignment='top',
+                                       bbox=dict(facecolor='white', edgecolor='red', boxstyle='round,pad=0.3', alpha=0.8))
+        self.pitch_text = self.ax.text(0.16, 0.95, '', transform=self.ax.transAxes, fontsize=14, color='green', verticalalignment='top',
+                                        bbox=dict(facecolor='white', edgecolor='green', boxstyle='round,pad=0.3', alpha=0.8))
+        self.yaw_text = self.ax.text(0.30, 0.95, '', transform=self.ax.transAxes, fontsize=14, color='blue', verticalalignment='top',
+                                      bbox=dict(facecolor='white', edgecolor='blue', boxstyle='round,pad=0.3', alpha=0.8))
 
         self.setup_plot_labels()
 
@@ -338,20 +346,13 @@ class GraphScreen(Screen):
 
     def setup_plot_labels(self):
         """Set up labels, titles, and legends for the plots."""
-        self.ax1.set_title('Pitch over Time', fontsize=14)
-        self.ax1.set_xlabel('Time (s)', fontsize=12)
-        self.ax1.set_ylabel('Pitch (degrees)', fontsize=12)
-        self.ax1.legend(loc='upper right')
+        self.ax.set_title('Roll, Elevation, and Azimuth over Time', fontsize=14)
+        self.ax.set_xlabel('Time (Minutes)', fontsize=12)
+        self.ax.set_ylabel('Degrees', fontsize=12)
+        self.ax.legend(loc='upper right')
+        self.ax.grid(True)
+        self.ax.set_axisbelow(True)  # Ensure grid lines are behind the plot lines
 
-        self.ax2.set_title('Yaw over Time', fontsize=14)
-        self.ax2.set_xlabel('Time (s)', fontsize=12)
-        self.ax2.set_ylabel('Yaw (degrees)', fontsize=12)
-        self.ax2.legend(loc='upper right')
-
-        self.ax3.set_title('Pitch vs Yaw', fontsize=14)
-        self.ax3.set_xlabel('Yaw (degrees)', fontsize=12)
-        self.ax3.set_ylabel('Pitch (degrees)', fontsize=12)
-        self.ax3.legend(loc='upper right')
 
         self.fig.tight_layout()
 
@@ -359,23 +360,25 @@ class GraphScreen(Screen):
         """Update the plot with the latest serial data."""
         try:
             if len(self.x_data) > 0:
-                # Update pitch vs time plot
-                self.pitch_line.set_data(self.x_data, self.pitch_data)
-                self.ax1.relim()
-                self.ax1.autoscale_view()
+                # Update Roll, Pitch, and Yaw vs Time plot
+                self.line_roll.set_data(self.x_data, self.roll_data)
+                self.line_pitch.set_data(self.x_data, self.pitch_data)
+                self.line_yaw.set_data(self.x_data, self.yaw_data)
+                self.ax.relim()
+                self.ax.autoscale_view()
 
-                # Update yaw vs time plot
-                self.yaw_line.set_data(self.x_data, self.yaw_data)
-                self.ax2.relim()
-                self.ax2.autoscale_view()
+                # # Set x-axis limit to a maximum of 15 minutes
+                # if len(self.x_data) > 0:
+                #     self.ax.set_xlim(left=max(0, min(max(self.x_data) - 15, 0)), right=15)
 
-                # Update pitch vs yaw plot
-                self.pitch_vs_yaw_line.set_data(self.yaw_data, self.pitch_data)
-                self.ax3.relim()
-                self.ax3.autoscale_view()
+                # Update the text annotations with the latest values
+                self.roll_text.set_text(f'Roll: {self.roll_data[-1]:.2f}°')
+                self.pitch_text.set_text(f'Pitch: {self.pitch_data[-1]:.2f}°')
+                self.yaw_text.set_text(f'Yaw: {self.yaw_data[-1]:.2f}°')
 
                 # Redraw the canvas
                 self.canvas.draw_idle()
+                
         except Exception as e:
             print(f"Error in updating the plot: {e}")  # Log the error
 
@@ -389,10 +392,12 @@ class GraphScreen(Screen):
                     match = re.match(pattern, line)
                     if match:
                         timestamp, roll, pitch, yaw = match.groups()
-                        time_value = float(timestamp)
+                        time_value = float(timestamp) / 60  # Convert to minutes
                         self.x_data.append(time_value)
+                        self.roll_data.append(float(roll))
                         self.pitch_data.append(float(pitch))
                         self.yaw_data.append(float(yaw))
+                        
             except Exception as e:
                 print(f"Error reading serial data: {e}")
                 break
@@ -413,7 +418,7 @@ class GraphScreen(Screen):
 class InfoScreen(Screen):
     def __init__(self, **kwargs):
         super(InfoScreen, self).__init__(**kwargs)
-        self.add_widget(Label(text="Information Screen", font_size='24sp', color=(1, 1, 1, 1)))
+        self.add_widget(Label(text="Information Screen", font_size='24sp', color=(0, 0, 0, 1)))
 
 
 class AnimatedLogo(Widget):
