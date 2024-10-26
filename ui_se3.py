@@ -18,6 +18,8 @@ from kivy.clock import Clock
 from kivy.uix.label import Label
 from kivy.uix.button import Button 
 from kivy.uix.boxlayout import BoxLayout  
+from kivy.graphics import Color, RoundedRectangle
+from kivy.uix.modalview import ModalView
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.popup import Popup
@@ -87,8 +89,8 @@ MDScreen:
 
                 DrawerClickableItem:
                     icon: "information-outline"
-                    text: "info"
-                    on_release: app.root.current = 'info_screen'  # Navigate to info screen
+                    text: "Info"
+                    on_release: app.show_info_popup()
 
                 DrawerClickableItem:
                     icon: "close"
@@ -195,26 +197,26 @@ MDScreen:
                                     #InfoScreen
 ########################################################################################
 
-<InfoScreen>:
-    name: 'info_screen'
-    BoxLayout:
-        orientation: 'vertical'
-        MDTopAppBar:
-            title: "Info"
-            elevation: 4
-            md_bg_color: "#fffff0"
-            specific_text_color: "#4a4939"
-            left_action_items: [["arrow-left", lambda x: app.go_back()]]   
+# <InfoScreen>:
+#     name: 'info_screen'
+#     BoxLayout:
+#         orientation: 'vertical'
+#         MDTopAppBar:
+#             title: "Info"
+#             elevation: 4
+#             md_bg_color: "#fffff0"
+#             specific_text_color: "#4a4939"
+#             left_action_items: [["arrow-left", lambda x: app.go_back()]]   
 
-        Label:
-            text: "Information about the application"
-            font_size: '24sp'
-            color: 0, 0, 0, 1
-        Label:
-            text: "This application allows you to connect to Bluetooth devices and visualize data."
-            size_hint_y: None
-            height: self.texture_size[1]  # Adjust height according to text size
-            color: 0, 0, 0, 1   
+#         Label:
+#             text: "Information about the application"
+#             font_size: '24sp'
+#             color: 0, 0, 0, 1
+#         Label:
+#             text: "This application allows you to connect to Bluetooth devices and visualize data."
+#             size_hint_y: None
+#             height: self.texture_size[1]  # Adjust height according to text size
+#             color: 0, 0, 0, 1   
 '''
 if not hasattr(FigureCanvasKivyAgg, 'resize_event'):
     def resize_event(self):
@@ -415,10 +417,33 @@ class GraphScreen(Screen):
     #             self.ser.close()
 
 
-class InfoScreen(Screen):
+# class InfoScreen(Screen):
+#     def __init__(self, **kwargs):
+#         super(InfoScreen, self).__init__(**kwargs)
+#         self.add_widget(Label(text="Information Screen", font_size='24sp', color=(0, 0, 0, 1)))
+
+class RoundedPopup(ModalView):
     def __init__(self, **kwargs):
-        super(InfoScreen, self).__init__(**kwargs)
-        self.add_widget(Label(text="Information Screen", font_size='24sp', color=(0, 0, 0, 1)))
+        super().__init__(**kwargs)
+        self.size_hint = (None, None)
+        self.size = (400, 300)
+        self.auto_dismiss = True
+        self.background_color = (0, 0, 0, 0)  # Make background transparent
+
+        # Adding custom rounded background
+        with self.canvas.before:
+            Color(0.9, 0.9, 0.9, 1)  # White background color
+            self.bg = RoundedRectangle(
+                size=self.size,
+                pos=self.pos,
+                radius=[20]  # Adjust radius to make corners more rounded
+            )
+        self.bind(pos=self.update_bg, size=self.update_bg)
+
+    def update_bg(self, *args):
+        """Update the size and position of the rounded background."""
+        self.bg.size = self.size
+        self.bg.pos = self.pos
 
 
 class AnimatedLogo(Widget):
@@ -504,7 +529,7 @@ class MainApp(MDApp):
         sm.add_widget(MainScreen(name='main_screen'))  # Main screen
         sm.add_widget(BluetoothScreen(name='bluetooth_screen'))  # Bluetooth screen
         sm.add_widget(GraphScreen(name='graph_screen'))  # Graph screen
-        sm.add_widget(InfoScreen(name='info_screen'))  # Info screen
+        # sm.add_widget(InfoScreen(name='info_screen'))  # Info screen
 
         # Set the initial screen
         sm.current = 'splash_screen'  # Start with the welcome screen
@@ -514,7 +539,37 @@ class MainApp(MDApp):
     def scan_for_devices(self):
         """ Method to initiate scanning from the app level. """
         self.root.get_screen('bluetooth_screen').scan_for_devices()
-    
+
+    def show_info_popup(self):
+        """ Show a popup with information about the app with rounded corners and wrapped text. """
+
+        # Content layout
+        content = BoxLayout(orientation='vertical', padding=20, spacing=10)
+
+        # Information label with text wrapping
+        info_label = Label(
+            text="App Version: 1.0.0\nThis application allows you to connect to Bluetooth devices and visualize data.",
+            font_size='16sp',
+            color=(0, 0, 0, 1),
+            halign="center",
+            valign="middle",
+            text_size=(300, None)  # Limiting width to wrap text within 300 pixels
+        )
+        content.add_widget(info_label)
+
+        # Close button
+        close_button = Button(text="Close", size_hint=(None, None), size=(100, 40))
+        close_button.bind(on_release=lambda *args: popup.dismiss())
+        content.add_widget(close_button)
+
+        # Create the rounded popup
+        popup = RoundedPopup()
+        popup.add_widget(content)
+
+        # Open the popup
+        popup.open()
+
+
     def go_back(self):
         self.root.current = 'main_screen'   
 
