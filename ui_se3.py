@@ -5,6 +5,9 @@ import re
 import pandas as pd
 import asyncio
 import threading
+import cv2
+import os
+from datetime import datetime
 from kivy.app import App
 from kivy.garden.matplotlib.backend_kivyagg import FigureCanvasKivyAgg
 import matplotlib.pyplot as plt
@@ -297,6 +300,8 @@ class GraphScreen(Screen):
         super(GraphScreen, self).__init__(**kwargs)
         self.graph_initialized = False
         self.ser = None
+        self.recording = False
+        self.video_writer = None
 
     def on_enter(self):
         """Initialize the graph when entering the screen."""
@@ -329,7 +334,7 @@ class GraphScreen(Screen):
         self.x_data ,self.roll_data, self.pitch_data, self.yaw_data = [], [], [] , []
         self.df = pd.DataFrame()
 
-        self.line_roll, = self.ax.plot([], [], label='Roll', color='r')
+        # self.line_roll, = self.ax.plot([], [], label='Roll', color='r')
         self.line_pitch, = self.ax.plot([], [], label='Elevation', color='g')
         self.line_yaw, = self.ax.plot([], [], label='Azimuth', color='b')
 
@@ -348,7 +353,7 @@ class GraphScreen(Screen):
 
     def setup_plot_labels(self):
         """Set up labels, titles, and legends for the plots."""
-        self.ax.set_title('Roll, Elevation, and Azimuth over Time', fontsize=14)
+        self.ax.set_title('Elevation, and Azimuth over Time', fontsize=14)
         self.ax.set_xlabel('Time (Minutes)', fontsize=12)
         self.ax.set_ylabel('Degrees', fontsize=12)
         self.ax.legend(loc='upper right')
@@ -358,12 +363,41 @@ class GraphScreen(Screen):
 
         self.fig.tight_layout()
 
+    def toggle_recording(self):
+        """Start or stop recording the plot."""
+        if not self.recording:
+            self.start_recording()
+        else:
+            self.stop_recording()
+
+    def start_recording(self):
+        """Start video recording."""
+        self.recording = True
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.output_file = f"graph_record_{timestamp}.avi"
+
+        # Set video codec and parameters
+        frame_width = int(self.canvas.width)
+        frame_height = int(self.canvas.height)
+        self.video_writer = cv2.VideoWriter(
+            self.output_file, cv2.VideoWriter_fourcc(*'XVID'), 10,
+            (frame_width, frame_height)
+        )
+        print(f"Recording started: {self.output_file}")
+
+    def stop_recording(self):
+        """Stop video recording."""
+        self.recording = False
+        if self.video_writer:
+            self.video_writer.release()
+        print(f"Recording saved: {self.output_file}")
+
     def update_plot(self, dt):
         """Update the plot with the latest serial data."""
         try:
             if len(self.x_data) > 0:
                 # Update Roll, Pitch, and Yaw vs Time plot
-                self.line_roll.set_data(self.x_data, self.roll_data)
+                # self.line_roll.set_data(self.x_data, self.roll_data)
                 self.line_pitch.set_data(self.x_data, self.pitch_data)
                 self.line_yaw.set_data(self.x_data, self.yaw_data)
                 self.ax.relim()
@@ -374,15 +408,24 @@ class GraphScreen(Screen):
                 #     self.ax.set_xlim(left=max(0, min(max(self.x_data) - 15, 0)), right=15)
 
                 # Update the text annotations with the latest values
-                self.roll_text.set_text(f'Roll: {self.roll_data[-1]:.2f}°')
-                self.pitch_text.set_text(f'Pitch: {self.pitch_data[-1]:.2f}°')
-                self.yaw_text.set_text(f'Yaw: {self.yaw_data[-1]:.2f}°')
+                # self.roll_text.set_text(f'Roll: {self.roll_data[-1]:.2f}°')
+                self.pitch_text.set_text(f'Elevation: {self.pitch_data[-1]:.2f}°')
+                self.yaw_text.set_text(f'Azimuth: {self.yaw_data[-1]:.2f}°')
 
                 # Redraw the canvas
                 self.canvas.draw_idle()
                 
         except Exception as e:
             print(f"Error in updating the plot: {e}")  # Log the error
+
+    def capture_frame(self):
+        """Capture the current frame and write it to the video file."""
+        # Convert canvas to image
+        self.canvas.export_as_image().save('temp_frame.png')
+        frame = cv2.imread('temp_frame.png')
+        self.video_writer.write(frame)
+        os.remove('temp_frame.png')
+
 
 
     def read_serial_data(self):
@@ -548,7 +591,7 @@ class MainApp(MDApp):
 
         # Information label with text wrapping
         info_label = Label(
-            text="App Version: 1.0.0\nThis application allows you to connect to Bluetooth devices and visualize data.",
+            text="App Version: 1.0.0\nThis application allows you to connect via a Serial USB or Serial Bluetooth devices and visualize data.",
             font_size='16sp',
             color=(0, 0, 0, 1),
             halign="center",
