@@ -282,6 +282,10 @@ class BluetoothScreen(Screen):
 class CustomFigureCanvasKivyAgg(FigureCanvasKivyAgg):
     def __init__(self, figure, **kwargs):
         super(CustomFigureCanvasKivyAgg, self).__init__(figure, **kwargs)
+
+    def motion_notify_event(self, x, y, guiEvent=None):
+        self.enter_notify_event(x, y)
+
         
         # Connect the motion notify event to the figure's canvas
         self.mpl_disconnect(self.on_mouse_move)
@@ -302,6 +306,8 @@ class GraphScreen(Screen):
         self.ser = None
         self.recording = False
         self.video_writer = None
+        self.canvas_kivy_agg = None
+        
 
     def on_enter(self):
         """Initialize the graph when entering the screen."""
@@ -601,7 +607,7 @@ class MainApp(MDApp):
         content.add_widget(info_label)
 
         # Close button
-        close_button = Button(text="Close", size_hint=(None, None), size=(100, 40))
+        close_button = Button(text="Close", size_hint=(None, None), size=(100, 40), pos_hint={'center_x': 0.5})
         close_button.bind(on_release=lambda *args: popup.dismiss())
         content.add_widget(close_button)
 
@@ -614,7 +620,9 @@ class MainApp(MDApp):
 
 
     def go_back(self):
-        self.root.current = 'main_screen'   
+        """Navigate to the previous screen."""
+        if self.root.current != 'main_screen':
+            self.root.current = 'main_screen' 
 
 if __name__ == '__main__':
     MainApp().run()
