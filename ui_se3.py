@@ -195,36 +195,13 @@ MDScreen:
         BoxLayout:
             id: plot_area
             # Add your matplotlib canvas or other widgets here     
-
-########################################################################################
-                                    #InfoScreen
-########################################################################################
-
-# <InfoScreen>:
-#     name: 'info_screen'
-#     BoxLayout:
-#         orientation: 'vertical'
-#         MDTopAppBar:
-#             title: "Info"
-#             elevation: 4
-#             md_bg_color: "#fffff0"
-#             specific_text_color: "#4a4939"
-#             left_action_items: [["arrow-left", lambda x: app.go_back()]]   
-
-#         Label:
-#             text: "Information about the application"
-#             font_size: '24sp'
-#             color: 0, 0, 0, 1
-#         Label:
-#             text: "This application allows you to connect to Bluetooth devices and visualize data."
-#             size_hint_y: None
-#             height: self.texture_size[1]  # Adjust height according to text size
-#             color: 0, 0, 0, 1   
 '''
+
 if not hasattr(FigureCanvasKivyAgg, 'resize_event'):
     def resize_event(self):
         pass
     FigureCanvasKivyAgg.resize_event = resize_event
+
 # Function to detect device
 def detect_device():
     device_ports = [
@@ -304,11 +281,8 @@ class GraphScreen(Screen):
         super(GraphScreen, self).__init__(**kwargs)
         self.graph_initialized = False
         self.ser = None
-        self.recording = False
-        self.video_writer = None
         self.canvas_kivy_agg = None
         
-
     def on_enter(self):
         """Initialize the graph when entering the screen."""
         if not self.graph_initialized:
@@ -365,38 +339,7 @@ class GraphScreen(Screen):
         self.ax.legend(loc='upper right')
         self.ax.grid(True)
         self.ax.set_axisbelow(True)  # Ensure grid lines are behind the plot lines
-
-
         self.fig.tight_layout()
-
-    def toggle_recording(self):
-        """Start or stop recording the plot."""
-        if not self.recording:
-            self.start_recording()
-        else:
-            self.stop_recording()
-
-    def start_recording(self):
-        """Start video recording."""
-        self.recording = True
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.output_file = f"graph_record_{timestamp}.avi"
-
-        # Set video codec and parameters
-        frame_width = int(self.canvas.width)
-        frame_height = int(self.canvas.height)
-        self.video_writer = cv2.VideoWriter(
-            self.output_file, cv2.VideoWriter_fourcc(*'XVID'), 10,
-            (frame_width, frame_height)
-        )
-        print(f"Recording started: {self.output_file}")
-
-    def stop_recording(self):
-        """Stop video recording."""
-        self.recording = False
-        if self.video_writer:
-            self.video_writer.release()
-        print(f"Recording saved: {self.output_file}")
 
     def update_plot(self, dt):
         """Update the plot with the latest serial data."""
@@ -424,16 +367,6 @@ class GraphScreen(Screen):
         except Exception as e:
             print(f"Error in updating the plot: {e}")  # Log the error
 
-    def capture_frame(self):
-        """Capture the current frame and write it to the video file."""
-        # Convert canvas to image
-        self.canvas.export_as_image().save('temp_frame.png')
-        frame = cv2.imread('temp_frame.png')
-        self.video_writer.write(frame)
-        os.remove('temp_frame.png')
-
-
-
     def read_serial_data(self):
         """Continuously read serial data."""
         while self.ser and self.ser.is_open:
@@ -443,11 +376,12 @@ class GraphScreen(Screen):
                     match = re.match(pattern, line)
                     if match:
                         timestamp, roll, pitch, yaw = match.groups()
-                        time_value = float(timestamp) / 60  # Convert to minutes
+                        time_value = float(timestamp) / 60  # % 15 :- upto 15 min # Convert to minutes
                         self.x_data.append(time_value)
                         self.roll_data.append(float(roll))
                         self.pitch_data.append(float(pitch))
                         self.yaw_data.append(float(yaw))
+                        
                         
             except Exception as e:
                 print(f"Error reading serial data: {e}")
@@ -459,17 +393,6 @@ class GraphScreen(Screen):
             self.ser.close()
             print("Serial connection closed.")
         self.ser = None
-
-    # def on_leave(self):
-    #     if hasattr(self, 'ser') and self.ser is not None:
-    #         if self.ser.is_open:
-    #             self.ser.close()
-
-
-# class InfoScreen(Screen):
-#     def __init__(self, **kwargs):
-#         super(InfoScreen, self).__init__(**kwargs)
-#         self.add_widget(Label(text="Information Screen", font_size='24sp', color=(0, 0, 0, 1)))
 
 class RoundedPopup(ModalView):
     def __init__(self, **kwargs):
