@@ -283,6 +283,7 @@ class GraphScreen(Screen):
         self.ser = None
         self.canvas_kivy_agg = None
         
+
     def on_enter(self):
         """Initialize the graph when entering the screen."""
         if not self.graph_initialized:
