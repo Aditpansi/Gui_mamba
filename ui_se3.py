@@ -280,7 +280,7 @@ class GraphScreen(Screen):
     def __init__(self, **kwargs):
         super(GraphScreen, self).__init__(**kwargs)
         self.graph_initialized = False
-        self.ser = None
+        self.ser = None 
         self.canvas_kivy_agg = None
         
 
@@ -320,11 +320,11 @@ class GraphScreen(Screen):
         self.line_yaw, = self.ax.plot([], [], label='Azimuth', color='b')
 
         # Initialize text annotations
-        self.roll_text = self.ax.text(0.02, 0.95, '', transform=self.ax.transAxes, fontsize=14, color='red', verticalalignment='top',
-                                       bbox=dict(facecolor='white', edgecolor='red', boxstyle='round,pad=0.3', alpha=0.8))
-        self.pitch_text = self.ax.text(0.16, 0.95, '', transform=self.ax.transAxes, fontsize=14, color='green', verticalalignment='top',
+        # self.roll_text = self.ax.text(0.02, 0.95, '', transform=self.ax.transAxes, fontsize=14, color='red', verticalalignment='top',
+        #                                bbox=dict(facecolor='white', edgecolor='red', boxstyle='round,pad=0.3', alpha=0.8))
+        self.pitch_text = self.ax.text(0.02, 0.95, '', transform=self.ax.transAxes, fontsize=14, color='green', verticalalignment='top',
                                         bbox=dict(facecolor='white', edgecolor='green', boxstyle='round,pad=0.3', alpha=0.8))
-        self.yaw_text = self.ax.text(0.30, 0.95, '', transform=self.ax.transAxes, fontsize=14, color='blue', verticalalignment='top',
+        self.yaw_text = self.ax.text(0.20, 0.95, '', transform=self.ax.transAxes, fontsize=14, color='blue', verticalalignment='top',
                                       bbox=dict(facecolor='white', edgecolor='blue', boxstyle='round,pad=0.3', alpha=0.8))
 
         self.setup_plot_labels()
