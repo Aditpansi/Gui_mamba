@@ -300,7 +300,7 @@ class GraphScreen(Screen):
         """Set up the Matplotlib plot in the Kivy screen."""
         try:
             self.port = detect_device()  
-            self.ser = serial.Serial(self.port, 115200)  
+            self.ser = serial.Serial(self.port, 115200,timeout=1)  
             print(f"Serial connection established on port {self.port}")
         except Exception as e:
             print(f"Error initializing serial connection: {e}")
@@ -378,16 +378,22 @@ class GraphScreen(Screen):
                     if match:
                         timestamp, roll, pitch, yaw = match.groups()
                         time_value = float(timestamp) / 60  # % 15 :- upto 15 min # Convert to minutes
-                        self.x_data.append(time_value)
-                        self.roll_data.append(float(roll))
-                        self.pitch_data.append(float(pitch))
-                        self.yaw_data.append(float(yaw))
-                        
-                        
-            except Exception as e:
-                print(f"Error reading serial data: {e}")
-                break
 
+                        # Use Clock to safely update UI elements
+                        Clock.schedule_once(lambda dt: self.update_data(time_value, float(roll), float(pitch), float(yaw)))
+            except Exception as e:
+                        print(f"Error reading serial data: {e}")
+                        break
+
+    def update_data(self, time_value, roll, pitch, yaw):
+        """Safely update the graph data from the serial thread."""
+        self.x_data.append(time_value)
+        self.roll_data.append(float(roll))
+        self.pitch_data.append(float(pitch))
+        self.yaw_data.append(float(yaw))
+                        
+                        
+            
     def on_leave(self):
         """Cleanup actions when leaving the GraphScreen."""
         if self.ser and self.ser.is_open:
